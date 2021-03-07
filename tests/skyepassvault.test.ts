@@ -4,15 +4,14 @@ import { patract, network, artifacts } from 'redspot';
 import { DB, IPFS, Metadata } from '../client/index'
 import path from 'path'
 import fs from 'fs'
-import Keyring from '@polkadot/keyring';
 import { mnemonicToMiniSecret } from '@polkadot/util-crypto'
-import crypto, { recover } from 'eth-crypto'
+import crypto from 'eth-crypto'
 const { u8aToHex } = require('@polkadot/util');
 
 
-const { getContractFactory, getRandomSigner, getRandomSignerWithMnemonic } = patract;
+const { getContractFactory, getRandomSigner } = patract;
 
-const { api, getSigners, createSigner, keyring } = network;
+const { api, getSigners, keyring } = network;
 
 const testVault = "QmPvNDeFhpN5WxLmnQ7f2WS7si3CtF1qr5VorDg6E1EL2A"
 
@@ -39,21 +38,22 @@ describe('End to End run through', () => {
     const { one, contract, deployer } = await setup()
     const dbPath = path.resolve(__dirname + '/../client/passwords.json')
 
-    const sender1 = await getRandomSignerWithMnemonic(deployer, one.muln(10))
-    const sender2 = await getRandomSignerWithMnemonic(deployer, one.muln(10))
-    const sender3 = await getRandomSignerWithMnemonic(deployer, one.muln(10))
+    const sender1 = await getRandomSigner(deployer, one.muln(10))
+    const sender2 = await getRandomSigner(deployer, one.muln(10))
+    const sender3 = await getRandomSigner(deployer, one.muln(10))
 
-    const privateKey1 = mnemonicToMiniSecret(sender1.mnemonic)
+
+    const privateKey1 = mnemonicToMiniSecret(sender1.pair.suri)
     const keys1 = {
       privateKey: u8aToHex(privateKey1),
       publicKey: crypto.publicKeyByPrivateKey(u8aToHex(privateKey1))
     }
-    const privateKey2 = mnemonicToMiniSecret(sender2.mnemonic)
+    const privateKey2 = mnemonicToMiniSecret(sender2.pair.suri)
     const keys2 = {
       privateKey: u8aToHex(privateKey2),
       publicKey: crypto.publicKeyByPrivateKey(u8aToHex(privateKey2))
     }
-    const privateKey3 = mnemonicToMiniSecret(sender3.mnemonic)
+    const privateKey3 = mnemonicToMiniSecret(sender3.pair.suri)
     const keys3 = {
       privateKey: u8aToHex(privateKey3),
       publicKey: crypto.publicKeyByPrivateKey(u8aToHex(privateKey3))
@@ -79,10 +79,10 @@ describe('End to End run through', () => {
     const { cid } = await metadata.buildMetadata()
 
     // sender1 creates a vault
-    await expect(contract.tx.createVault(cid, { signer: sender1.signer }))
+    await expect(contract.tx.createVault(cid, { signer: sender1 }))
       .to.emit(contract, 'VaultCreation')
-      .withArgs(0, sender1.signer.address)
-    expect((await contract.query.ownerOf(0)).output).to.equal(sender1.signer.address)
+      .withArgs(0, sender1.address)
+    expect((await contract.query.ownerOf(0)).output).to.equal(sender1.address)
 
     // // sender1 fetch a vault
     // // TODO: validate nounce ... 
@@ -104,21 +104,21 @@ describe('End to End run through', () => {
     }
 
     // sender1 can add sender2 and sender3 to the shared list 
-    await expect(contract.tx.nominateMember(0, sender2.signer.address, {signer: sender1.signer}))
+    await expect(contract.tx.nominateMember(0, sender2.address, {signer: sender1}))
       .to.emit(contract, "MemembershipGranted")
-      .withArgs(0, sender1.signer.address, sender2.signer.address)
+      .withArgs(0, sender1.address, sender2.address)
 
-    await expect(contract.tx.nominateMember(0, sender3.signer.address, { signer: sender1.signer }))
+    await expect(contract.tx.nominateMember(0, sender3.address, { signer: sender1 }))
       .to.emit(contract, "MemembershipGranted")
-      .withArgs(0, sender1.signer.address, sender3.signer.address)
+      .withArgs(0, sender1.address, sender3.address)
     
     const new_result = await metadata.buildMetadata()
-    await expect(contract.tx.updateMetadata(0, new_result.cid, {signer: sender1.signer}))
+    await expect(contract.tx.updateMetadata(0, new_result.cid, {signer: sender1}))
       .to.emit(contract, 'VaultUpdate')
-      .withArgs(0, sender1.signer.address)
+      .withArgs(0, sender1.address)
 
     // Now sender 2 can fetch and read the vault
-    vault_cid = (await contract.query.getMetadata(0, {signer: sender2.signer})).output
+    vault_cid = (await contract.query.getMetadata(0, {signer: sender2})).output
     result = JSON.parse(await ipfs.cat(vault_cid?.toString()))
     
     recovered = await metadata.recover(result, keys1.publicKey, keys1.privateKey)
@@ -136,12 +136,12 @@ describe('End to End run through', () => {
 
     const updated_result = await metadata.buildMetadata()
 
-    await expect(contract.tx.updateMetadata(0, updated_result.cid, { signer: sender2.signer }))
+    await expect(contract.tx.updateMetadata(0, updated_result.cid, { signer: sender2 }))
       .to.emit(contract, 'VaultUpdate')
-      .withArgs(0, sender2.signer.address)
+      .withArgs(0, sender2.address)
 
     // Now sender 1 can fetch and read the vault
-    vault_cid = (await contract.query.getMetadata(0, { signer: sender1.signer })).output
+    vault_cid = (await contract.query.getMetadata(0, { signer: sender1 })).output
     result = JSON.parse(await ipfs.cat(vault_cid?.toString()))
 
     recovered = await metadata.recover(result, keys1.publicKey, keys1.privateKey)
