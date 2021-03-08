@@ -2,7 +2,12 @@
 
 Please refer to https://github.com/w3f/Open-Grants-Program/pull/212 for descriptions. 
 
+## A Note for Web3 Foundation OpenGrantProgram Reviewers
+For Milestone 0 Evaluation: the code base delivers all functionalities of Milestone0 as of commit 196f61f3adbb98828315669537433fbfa3e838a8
 
+We are continiously working on the code, while being reviewed. The code base is under heavy development. hopefully we won't accidentally introduce breaking changes, but if we do, please go to commit 196f61f3adbb98828315669537433fbfa3e838a8. 
+
+Thanks!
 
 ## How to Run Tests
 
@@ -99,7 +104,7 @@ Simply type in `yarn test` to start testing. The process can take somewhere betw
 
 
 
-## Navigate the Code
+## Code Structure
 
 ```
 ├── LICENSE.txt        --> Apache 2 License
@@ -112,7 +117,8 @@ Simply type in `yarn test` to start testing. The process can take somewhere betw
 │   ├── index.ts
 │   ├── ipfs.ts - IPFS is used to itneract with IPFS
 │   ├── local.json - is the database to store caches of blockchain data, empty by now
-│   ├── metadata.ts - is used to maintain the metadata to be stored on IPFS and on blockchain
+│   ├── metadata.ts - Metadata is doing the heavly lifting. 
+        Encryption/Decryption; Generate Metadata and Interaction w/ DB and IPFS.
 │   └── passwords.json - the password database file
 ├── contracts
 │   ├── Cargo.lock 
@@ -127,7 +133,7 @@ Simply type in `yarn test` to start testing. The process can take somewhere betw
 ├── scripts
 │   ├── deploy.ts - run by `yarn deploy`
 ├── tests
-│   └── skyepassvault.test.ts
+│   └── skyepassvault.test.ts - All unit tests
 ├── tsconfig.json
 └── yarn.lock
 ```
