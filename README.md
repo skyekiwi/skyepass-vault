@@ -81,7 +81,7 @@ A good general guide to setup the environment for Substrate environment can be f
     - Lastly, fire up the local blockchain 
 
         ```
-        path-to-patract-repo/target/release/patract-prep --dev 
+        path-to-patract-repo/target/release/patract-prep --dev --tmp
         # OR with Canvas
         canvas --dev --tmp
         ```
