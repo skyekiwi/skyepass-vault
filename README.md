@@ -56,7 +56,7 @@ A good general guide to setup the environment for Substrate environment can be f
     cargo install --force cargo-contract
     ```
 
-4. Grab a local Substrate blockchain node with `pallet-contract` included. There are many options: [patract](https://github.com/patractlabs/patract) is the one we choose. Alternatively, you can get [canvas](https://github.com/paritytech/canvas-node) by Parity. `Rust` is known for compiling slowly. It took me an hour to compile [patract](https://github.com/patractlabs/patract). 
+4. Grab a local Substrate blockchain node with `pallet-contract` included. There are many options: [patract](https://github.com/patractlabs/patract) is the one we choose. Alternatively, you can get [canvas](https://github.com/paritytech/canvas-node) by Parity. `Rust` is known for compiling slowly. It took me an hour to compile [jupiter](https://github.com/patractlabs/jupiter). 
 
     - To use [jupiter](https://github.com/patractlabs/jupiter), follow this [guide](https://github.com/patractlabs/jupiter#compile-and-run).  
 
@@ -69,7 +69,7 @@ A good general guide to setup the environment for Substrate environment can be f
     - Lastly, fire up the local blockchain 
 
         ```
-        path-to-patract-repo/target/release/jupiter-prep --dev
+        path-to-jupiter-repo/target/release/jupiter-prep --dev
         # OR with Canvas
         canvas --dev --tmp
         ```
