@@ -71,7 +71,7 @@ describe('End to End run through', () => {
       members: []
     }
 
-    const metadata = new Metadata(encryptionSchema, ipfs, db)
+    const metadata = new Metadata(encryptionSchema, 'test-vault', ipfs, db)
 
     db.addItem('password.skye.kiwi', { name: "Github", account: "something", password: "asdfasdf", OTP: "HJKHJKHJK" })
     db.addItem('password.skye.kiwi', { name: "Twitter", account: "something", password: "asdfasdf", OTP: "HJKHJKHJK" })
@@ -85,7 +85,7 @@ describe('End to End run through', () => {
     expect((await contract.query.ownerOf(0)).output).to.equal(sender1.address)
 
     // // sender1 fetch a vault
-    // // TODO: validate nounce ... 
+    // // TODO: validate nonce ... 
     let vault_cid = (await contract.query.getMetadata(0)).output
     let result = JSON.parse(await ipfs.cat(vault_cid?.toString()))
     let recovered = await metadata.recover(result, keys1.publicKey, keys1.privateKey)
@@ -152,7 +152,7 @@ describe('End to End run through', () => {
 
     // this is not a perfect test .. because sender1 and sender2 are reading 
     // the same local vault, but they should match. In a real world senario, 
-    // the newly fetched vault will be tested by nounce for error, if things 
+    // the newly fetched vault will be tested by nonce for error, if things 
     // are looking good, it should replace the local vault
     expect(JSON.stringify(recovered)).to.equal(JSON.stringify(local))
   })
@@ -282,7 +282,7 @@ describe('SkyePassVault Smart Contract', () => {
     await expect(contract.tx.updateMetadata(0, "456", { signer: sender1 }))
       .to.emit(contract, 'VaultUpdate')
       .withArgs(0, sender1.address)  
-    expect((await contract.query.getMetadata(0)).output).to.equal("456")
+
 
     expect((await contract.query.getMetadata(0)).output).to.equal("456")
     await expect(contract.tx.updateMetadata(0, "789", { signer: sender2 }))
@@ -291,7 +291,7 @@ describe('SkyePassVault Smart Contract', () => {
     
     expect((await contract.query.getMetadata(0)).output).to.equal("789")
 
-    expect((await contract.query.getMetadata(0)).output).to.equal("789")
+
 
     await expect(contract.tx.updateMetadata(0, "abc", { signer: sender3 }))
       .to.not.emit(contract, 'VaultUpdate')
@@ -314,7 +314,7 @@ describe('SkyePassVault Smart Contract', () => {
     await expect(contract.tx.nominateMember(0, sender2.address, { signer: sender1 }))
       .to.emit(contract, "MemembershipGranted")
       .withArgs(0, sender1.address, sender2.address)
-    expect((await contract.query.authorizeMember(0, sender2.address)).output).to.equal(true)
+
 
     // sender 2 cannot nominate another member
     expect((await contract.query.authorizeMember(0, sender2.address)).output).to.equal(true)
@@ -629,7 +629,7 @@ describe('Encrytion & Metadata', () => {
 		members: [keys2.publicKey, keys3.publicKey]
 	}
 
-	const metadata = new Metadata(encryptionSchema, 
+	const metadata = new Metadata(encryptionSchema, 'test vault',
     new IPFS({host: 'ipfs.infura.io', port: 5001, protocol: 'https'}), 
     new DB(dbPath))
 
@@ -644,23 +644,23 @@ describe('Encrytion & Metadata', () => {
 
 	it('generate, upload metadata & recover from metadata with a privatekey', async() => {
 
-		// IPFS Nounce pre-updating
-		const nounce_ipfs = await metadata.getIPFSMetadataNounce()
-		expect(nounce_ipfs).to.equal(0)
+		// IPFS Nonce pre-updating
+		const nonce_ipfs = await metadata.getIPFSMetadataNonce()
+		expect(nonce_ipfs).to.equal(0)
 
 		// local DB pre-updating
 		let dbObj = JSON.parse((await fs.readFileSync(dbPath)).toString())
-		expect(dbObj.package.nounce).to.equal(0)
+		expect(dbObj.package.nonce).to.equal(0)
 
-		// post-updating CID & Nounce
+		// post-updating CID & Nonce
 		let {cid, result} = await metadata.buildMetadata()
 		let recovered = await metadata.recover(result, keys1.publicKey, keys1.privateKey)
 
-		expect(recovered.package.nounce).to.equal(1)
+		expect(recovered.package.nonce).to.equal(1)
 		expect(recovered.package.last_cid).to.equal("")
 
 		dbObj = JSON.parse((await fs.readFileSync(dbPath)).toString())
-		expect(dbObj.package.nounce).to.equal(1)
+		expect(dbObj.package.nonce).to.equal(1)
 		expect(dbObj.package.last_cid).to.equal(cid)
 
 
@@ -668,7 +668,7 @@ describe('Encrytion & Metadata', () => {
 		const password1 = { name: "github", account: "something", password: "asdfasdf", OTP: "HJKHJKHJK" }
 		await metadata.db.addItem('password.skye.kiwi', password1)
 
-		// post-updating new (CID & Nounce)
+		// post-updating new (CID & Nonce)
 		const x = await metadata.buildMetadata()
 
 		const new_cid = x.cid
@@ -676,11 +676,11 @@ describe('Encrytion & Metadata', () => {
 
 		recovered = await metadata.recover(new_result, keys1.publicKey, keys1.privateKey)
 
-		expect(recovered.package.nounce).to.equal(2)
+		expect(recovered.package.nonce).to.equal(2)
 		expect(recovered.package.last_cid).to.equal(cid)
 
 		dbObj = JSON.parse((await fs.readFileSync(dbPath)).toString())
-		expect(dbObj.package.nounce).to.equal(2)
+		expect(dbObj.package.nonce).to.equal(2)
 		expect(dbObj.package.last_cid).to.equal(new_cid)
 	})
 })

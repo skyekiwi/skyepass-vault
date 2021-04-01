@@ -1,58 +1,60 @@
 import secrets from 'secrets.js-grempe'
 import crypto from 'eth-crypto'
 
-import { DB } from './index'
+import { DB, IPFS } from './index'
 
 class Metadata {
 	db: DB
+	name: string
 	encryptionSchema: {
 		pieces: number, quorum: number,
 		publicPieceCount: number,
 		members: Array<string>,
 		owner: string,
 	}
-	ipfs: any
+	ipfs: IPFS
 	metadataCid: any
 	metadata: {
-		pieces: number, quorum: number, nounce: number, owner: string,
+		pieces: number, quorum: number, nonce: number, owner: string, name: string,
 		unencrypted_cid: Array<string>, encrypted_cid: {[member: string]: string}
 	}
 
-	constructor(encryptionSchema, ipfs, db:DB) {
+	constructor(encryptionSchema, name: string, ipfs: IPFS, db:DB) {
 		this.encryptionSchema = { ...encryptionSchema }
 		this.db = db
 		this.ipfs = ipfs
 
+		this.name = name
 		this.metadataCid = this.db.getCID()
-		this.metadata = {}
 		if (this.encryptionSchema.pieces !== this.encryptionSchema.publicPieceCount
 			+ this.encryptionSchema.members.length + 1) {
 				throw new Error("wrong pieces count supplied")
 		}
 	}
 
-	async getIPFSMetadataNounce() {
-		let nounce = 0
+	async getIPFSMetadataNonce() {
+		let nonce = 0
 		if (this.metadataCid) {
 			const oldMetadata = JSON.parse(await this.ipfs.cat(this.metadataCid))
-			return oldMetadata.nounce
+			return oldMetadata.nonce
 		}
-		return nounce
+		return nonce
 	}
 
 	async buildMetadata() {
-		// fetch most updated nounce version
-		const nounce = await this.getIPFSMetadataNounce()
-		const current_nounce = this.db.getNounce()
+		// fetch most updated nonce version
+		const nonce = await this.getIPFSMetadataNonce()
+		const current_nonce = this.db.getNonce()
 
-		if (current_nounce < nounce) {
+		if (current_nonce < nonce) {
 			return {cid: "-1", result: "-1"}
-			throw new Error("Nounce error")
+			throw new Error("Nonce error")
 		}
 
+		this.metadata = {}
 		this.metadata.pieces = this.encryptionSchema.pieces
 		this.metadata.quorum = this.encryptionSchema.quorum
-		this.metadata.nounce = current_nounce
+		this.metadata.nonce = current_nonce
 
 		this.metadata.owner = this.encryptionSchema.owner
 		this.metadata.unencrypted_cid = []
@@ -82,6 +84,7 @@ class Metadata {
 			}
 		}
 
+		this.metadata.name = this.name
 		const newCid = await this.upload(JSON.stringify(this.metadata))
 
 		this.metadataCid = newCid
@@ -97,7 +100,7 @@ class Metadata {
 
 	async recover(metadata, publicKey, privateKey) {
 		if (this.encryptionSchema.quorum <= 1 + this.encryptionSchema.publicPieceCount) {
-			let contents = []
+			let contents = new Array()
 
 			for (let content of metadata.unencrypted_cid)
 				contents.push(await this.ipfs.cat(content))

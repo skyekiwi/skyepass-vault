@@ -10,7 +10,7 @@ class DB {
 		this.db.defaults({
 			'package': {
 				"last_cid": "",
-				"nounce": 0,
+				"nonce": 0,
 				"common": ['password.skye.kiwi', 'notes.skye.kiwi'],
 				"installed": []
 			},
@@ -63,11 +63,11 @@ class DB {
 		try { return this.db.get('package').value() }
 		catch(err) {console.error(err)}
 	}
-	public getNounce() {
-		return this.db.get('package.nounce').value()
+	public getNonce() {
+		return this.db.get('package.nonce').value()
 	}
 	public saveUpdates() {
-		this.db.update('package.nounce', n => n + 1).write()
+		this.db.update('package.nonce', n => n + 1).write()
 		return this.db.getState()
 	}
 	public writeCID(cid) {
