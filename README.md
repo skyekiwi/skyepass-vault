@@ -2,12 +2,7 @@
 
 Please refer to https://github.com/w3f/Open-Grants-Program/pull/212 for descriptions. 
 
-## A Note for Web3 Foundation OpenGrantProgram Reviewers
-For Milestone 0 Evaluation: the code base delivers all functionalities of Milestone0 as of commit 196f61f3adbb98828315669537433fbfa3e838a8
 
-We are continiously working on the code, while being reviewed. The code base is under heavy development. hopefully we won't accidentally introduce breaking changes, but if we do, please go to commit 196f61f3adbb98828315669537433fbfa3e838a8. 
-
-Thanks!
 
 ## How to Run Tests
 
@@ -63,25 +58,18 @@ A good general guide to setup the environment for Substrate environment can be f
 
 4. Grab a local Substrate blockchain node with `pallet-contract` included. There are many options: [patract](https://github.com/patractlabs/patract) is the one we choose. Alternatively, you can get [canvas](https://github.com/paritytech/canvas-node) by Parity. `Rust` is known for compiling slowly. It took me an hour to compile [patract](https://github.com/patractlabs/patract). 
 
-    - To use [patract](https://github.com/patractlabs/patract), follow this [guide](https://github.com/patractlabs/patract#compile-and-run).  
+    - To use [jupiter](https://github.com/patractlabs/jupiter), follow this [guide](https://github.com/patractlabs/jupiter#compile-and-run).  
+
+
 
     - To use [canvas](https://github.com/paritytech/canvas-node), follow this [guide](https://substrate.dev/substrate-contracts-workshop/#/0/setup?id=installing-the-canvas-node). 
-
-    - If you choose to use a `Canvas-node`, please change the `redspot.config.ts` in the `network.development.types` section to
-
-        ```json
-        types: {
-            "LookupSource": "AccountId",
-            "Address": "AccountId"
-        }
-        ```
-
-    - If you choose to use a `Patract-node`, you do not need to do anything to `redspot.config.ts`. 
-
+    
+    output of `canvas --version` is `canvas 0.1.0-385c4cc-x86_64-macos`
+    
     - Lastly, fire up the local blockchain 
 
         ```
-        path-to-patract-repo/target/release/patract-prep --dev --tmp
+        path-to-patract-repo/target/release/jupiter-prep --dev
         # OR with Canvas
         canvas --dev --tmp
         ```
@@ -104,7 +92,7 @@ Simply type in `yarn test` to start testing. The process can take somewhere betw
 
 
 
-## Code Structure
+## Navigate the Code
 
 ```
 ├── LICENSE.txt        --> Apache 2 License
@@ -117,8 +105,7 @@ Simply type in `yarn test` to start testing. The process can take somewhere betw
 │   ├── index.ts
 │   ├── ipfs.ts - IPFS is used to itneract with IPFS
 │   ├── local.json - is the database to store caches of blockchain data, empty by now
-│   ├── metadata.ts - Metadata is doing the heavly lifting. 
-        Encryption/Decryption; Generate Metadata and Interaction w/ DB and IPFS.
+│   ├── metadata.ts - is used to maintain the metadata to be stored on IPFS and on blockchain
 │   └── passwords.json - the password database file
 ├── contracts
 │   ├── Cargo.lock 
@@ -133,7 +120,7 @@ Simply type in `yarn test` to start testing. The process can take somewhere betw
 ├── scripts
 │   ├── deploy.ts - run by `yarn deploy`
 ├── tests
-│   └── skyepassvault.test.ts - All unit tests
+│   └── skyepassvault.test.ts
 ├── tsconfig.json
 └── yarn.lock
 ```
