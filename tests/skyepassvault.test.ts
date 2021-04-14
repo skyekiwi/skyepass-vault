@@ -95,14 +95,6 @@ describe('End to End run through', () => {
     delete local.package.last_cid
     expect(JSON.stringify(recovered)).to.equal(JSON.stringify(local))
 
-    // sender 1 share the vault with sender2 and sender3
-    encryptionSchema = {
-      pieces: 4, quorum: 2,
-      publicPieceCount: 1,
-      owner: keys1.publicKey,
-      members: [keys2.publicKey, keys3.publicKey]
-    }
-
     // sender1 can add sender2 and sender3 to the shared list 
     await expect(contract.tx.nominateMember(0, sender2.address, {signer: sender1}))
       .to.emit(contract, "MemembershipGranted")
