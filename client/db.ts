@@ -23,7 +23,7 @@ class DB {
 			}).write()
 		} catch (err) {
 			console.error(err)
-			throw (new Error('database error'))
+			throw (new Error('database error: initialization'))
 		}
 	}
 
@@ -37,7 +37,7 @@ class DB {
 			this.db.get(appId).push(content).write() } 
 		catch (err) {
 			console.error(err)
-			throw (new Error('database error'))
+			throw (new Error('database error: addItem'))
 		}
 	}
 	
@@ -45,7 +45,7 @@ class DB {
 		try { return this.db.get(appId).value().sort() } 
 		catch (err) { 
 			console.error(err)
-			throw(new Error('database error'))
+			throw(new Error('database error: readItems'))
 		}
 	}
 
@@ -53,7 +53,7 @@ class DB {
 		try { this.db.get(appId).remove((x) => x.uuid == uuid).write() }
 		catch (err) { 
 			console.error(err)
-			throw(new Error('database error'))
+			throw(new Error('database error: deleteItem'))
 		}
 	}
 
@@ -64,7 +64,7 @@ class DB {
 			this.db.get(appId).push(content).write() 
 		} catch (err) { 
 			console.error(err)
-			throw(new Error('database error'))
+			throw(new Error('database error: updateItem'))
 		}
 	}
 
@@ -83,7 +83,7 @@ class DB {
 		try { return this.db.get('package').value() }
 		catch(err) {
 			console.error(err)
-			throw(new Error('database error'))
+			throw(new Error('database error: getMetadata'))
 		}
 	}
 	public getNonce() {
@@ -91,7 +91,7 @@ class DB {
 			return this.db.get('package.nonce').value()
 		} catch (err) {
 			console.error(err)
-			throw (new Error('database error'))
+			throw (new Error('database error: getNonce'))
 		}
 	}
 	public saveUpdates() {
@@ -100,7 +100,7 @@ class DB {
 			return this.db.getState()
 		} catch (err) {
 			console.error(err)
-			throw (new Error('database error'))
+			throw (new Error('database error: saveUpdates'))
 		}
 	}
 	public writeCID(cid) {
@@ -108,7 +108,7 @@ class DB {
 			this.db.set('package.last_cid', cid).write()
 		} catch (err) {
 			console.error(err)
-			throw (new Error('database error'))
+			throw (new Error('database error: writeCID'))
 		}
 	}
 	public getCID(){
@@ -116,7 +116,7 @@ class DB {
 			return this.db.get('package.last_cid').value()
 		} catch (err) {
 			console.error(err)
-			throw (new Error('database error'))
+			throw (new Error('database error: getCID'))
 		}
 	}
 	public toJson() {
@@ -124,7 +124,7 @@ class DB {
 			return this.db.getState()
 		} catch (err) {
 			console.error(err)
-			throw (new Error('database error'))
+			throw (new Error('database error: toJson'))
 		}
 	}
 }

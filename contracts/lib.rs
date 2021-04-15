@@ -9,11 +9,10 @@ mod skye_pass_vault {
         HashMap as StorageHashMap,
     };
     use ink_prelude::string::String;
-
     use scale::{Decode,Encode};
-
     pub type VaultId = u128;
 
+    const IPFS_CID_LEN: usize = 46;
     #[ink(storage)]
     #[derive(Default)]
     pub struct SkyePassVault {
@@ -99,7 +98,7 @@ mod skye_pass_vault {
         pub fn create_vault(&mut self, metadata: String) -> Result<u128, Error> {
             let caller = self.env().caller();
 
-            if metadata.len() != 46 {
+            if metadata.len() != IPFS_CID_LEN {
                 return Err(Error::MetadataNotValid);
             }
 
@@ -161,7 +160,7 @@ mod skye_pass_vault {
         pub fn update_metadata(&mut self, vault_id: VaultId, metadata: String) -> Result<(), Error> {
             let caller = self.env().caller();
 
-            if metadata.len() != 46 {
+            if metadata.len() != IPFS_CID_LEN {
                 return Err(Error::MetadataNotValid);
             }
 

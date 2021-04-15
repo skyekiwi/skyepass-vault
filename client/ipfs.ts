@@ -24,7 +24,7 @@ class IPFS {
 			return await this.client.add(str)
 		} catch (err) {
 			console.error(err)
-			throw (new Error('IPFS Failure'))
+			throw (new Error('IPFS Failure: ipfs.add'))
 		}
 	}
 	public async cat(cid:string) {
@@ -38,7 +38,7 @@ class IPFS {
 			return result
 		} catch(err) {
 			console.error(err)
-			throw (new Error('IPFS Failure'))
+			throw (new Error('IPFS Failure: ipfs.cat'))
 		}
 	}
 	public async pin(cid:string) {
@@ -46,7 +46,7 @@ class IPFS {
 			return await this.client.pin.add(cid)
 		} catch (err) {
 			console.error(err)
-			throw (new Error('IPFS Failure'))
+			throw (new Error('IPFS Failure: ipfs.pin'))
 		}
 	}
 }
