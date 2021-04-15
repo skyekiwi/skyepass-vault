@@ -32,7 +32,9 @@ export default {
         "UnappliedSlash": {
           "validator": "AccountId",
           "reporters": "Vec<AccountId>"
-        }
+        }, Error: {
+          _enum: ['VaultIdError', 'AccessDenied', 'MetadataNotValid', 'MathError']
+        }, 
       },
       gasLimit: '400000000000',
       explorerUrl: 'https://polkadot.js.org/apps/#/explorer/query/',

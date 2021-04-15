@@ -14,6 +14,12 @@ const { getContractFactory, getRandomSigner } = patract;
 const { api, getSigners, keyring } = network;
 
 const testVault = "QmPvNDeFhpN5WxLmnQ7f2WS7si3CtF1qr5VorDg6E1EL2A"
+const newMetadata = [
+  "QmVV1agVZ7zgHToMBWEkzqgCU4SmUPr17GmHUg7sV6UTZc",
+  "QmY18PQMFhuc4b9MbAzpu595FvbasyfuNAe6mEQDENAtcU",
+  "QmbG97XZdG3FvcheY1jxUfA2F29mLkmRoD7JQtrv2919Gn",
+  "QmRvWsEa898wucJyyFPPMcNKmQfLysZdNyJ6JNyuwJ9KZE"
+]
 
 // End to End run through
 describe('End to End run through', () => {
@@ -41,7 +47,6 @@ describe('End to End run through', () => {
     const sender1 = await getRandomSigner(deployer, one.muln(10))
     const sender2 = await getRandomSigner(deployer, one.muln(10))
     const sender3 = await getRandomSigner(deployer, one.muln(10))
-
 
     const privateKey1 = mnemonicToMiniSecret(sender1.pair.suri)
     const keys1 = {
@@ -103,6 +108,8 @@ describe('End to End run through', () => {
       members: [keys2.publicKey, keys3.publicKey]
     }
 
+    metadata.updateEncryptionSchema(encryptionSchema)
+
     // sender1 can add sender2 and sender3 to the shared list 
     await expect(contract.tx.nominateMember(0, sender2.address, {signer: sender1}))
       .to.emit(contract, "MemembershipGranted")
@@ -120,8 +127,7 @@ describe('End to End run through', () => {
     // Now sender 2 can fetch and read the vault
     vault_cid = (await contract.query.getMetadata(0, {signer: sender2})).output
     result = JSON.parse(await ipfs.cat(vault_cid?.toString()))
-    
-    recovered = await metadata.recover(result, keys1.publicKey, keys1.privateKey)
+    recovered = await metadata.recover(result, keys2.publicKey, keys2.privateKey)
     local = metadata.db.toJson()
 
     delete recovered.package.last_cid
@@ -135,7 +141,6 @@ describe('End to End run through', () => {
     db.addItem('password.skye.kiwi', { name: "Twitter", account: "something", password: "asdfasdf", OTP: "HJKHJKHJK" })
 
     const updated_result = await metadata.buildMetadata()
-
     await expect(contract.tx.updateMetadata(0, updated_result.cid, { signer: sender2 }))
       .to.emit(contract, 'VaultUpdate')
       .withArgs(0, sender2.address)
@@ -183,13 +188,16 @@ describe('SkyePassVault Smart Contract', () => {
     return { sender1, sender2, sender3, sender4, contractFactory, contract, abi, receiver, Alice, one };
   }
 
+  let badAuthResult
+  let badMetadataResult
+
   // basic functionalities
   it('creates a new vault & assign caller as owner', async () => {
     const {contract, sender1} = await setup();
 
     expect((await contract.query.authorizeOwner(0, sender1.address)).output).to.equal(false)
     
-    await expect(contract.tx.createVault(JSON.stringify(testVault), { signer: sender1 }))
+    await expect(contract.tx.createVault(testVault, { signer: sender1 }))
       .to.emit(contract, 'VaultCreation')
       .withArgs(0, sender1.address)
     
@@ -201,7 +209,7 @@ describe('SkyePassVault Smart Contract', () => {
   it('adds a member to a vault & remove a member to a vault', async () => {
     const {contract, sender1, sender2} = await setup();
 
-    await expect(contract.tx.createVault(JSON.stringify(testVault), { signer: sender1 }))
+    await expect(contract.tx.createVault(testVault, { signer: sender1 }))
       .to.emit(contract, 'VaultCreation')
       .withArgs(0, sender1.address)
     
@@ -220,27 +228,39 @@ describe('SkyePassVault Smart Contract', () => {
   })
 
   it('queries & updates a metadata of a vault', async () => {
-    const { contract, sender1, sender2 } = await setup();
-    await expect(contract.tx.createVault(JSON.stringify(testVault), { signer: sender1 }))
-      .to.emit(contract, 'VaultCreation')
-      .withArgs(0, sender1.address)    
+    const { contract, sender1 } = await setup();
     
-    expect((await contract.query.getMetadata(0)).output).to.equal(JSON.stringify(testVault))
+    // valid CID
+    await expect(contract.tx.createVault(testVault, { signer: sender1 }))
+      .to.emit(contract, 'VaultCreation')
+      .withArgs(0, sender1.address)
+    expect((await contract.query.getMetadata(0)).output).to.equal(testVault)
 
-    await expect(contract.tx.updateMetadata(0, "123", {signer: sender1}))
+    // invalid CID
+    // "the dirty method" as in https://github.com/patractlabs/redspot/issues/78
+    badMetadataResult = await contract.query.createVault("bad metadata", { signer: sender1 })
+    expect(badMetadataResult.output?.toHuman().Err).to.equal('MetadataNotValid')
+    
+    // valid CID Update
+    await expect(contract.tx.updateMetadata(0, newMetadata[0], {signer: sender1}))
       .to.emit(contract, 'VaultUpdate')
       .withArgs(0, sender1.address)
 
-    expect((await contract.query.getMetadata(0)).output).to.equal("123")
+    expect((await contract.query.getMetadata(0)).output).to.equal(newMetadata[0])
+
+    // invalid CID Update
+    // "the dirty method" as in https://github.com/patractlabs/redspot/issues/78
+    badMetadataResult = await contract.query.updateMetadata(0, "bad metadata", { signer: sender1 })
+    expect(badMetadataResult.output?.toHuman().Err).to.equal('MetadataNotValid')
   })
 
   it('deletes a vault', async () => {
     const { contract, sender1 } = await setup();
-    await expect(contract.tx.createVault(JSON.stringify(testVault), { signer: sender1 }))
+    await expect(contract.tx.createVault(testVault, { signer: sender1 }))
       .to.emit(contract, 'VaultCreation')
       .withArgs(0, sender1.address)    
     
-    expect((await contract.query.getMetadata(0)).output).to.equal(JSON.stringify(testVault))
+    expect((await contract.query.getMetadata(0)).output).to.equal(testVault)
     expect((await contract.query.authorizeOwner(0, sender1.address)).output).to.equal(true)
 
     await expect(contract.tx.burnVault(0, { signer: sender1 }))
@@ -257,17 +277,17 @@ describe('SkyePassVault Smart Contract', () => {
     const { contract, sender1, sender2, sender3 } = await setup();
     
     // sender1 creates a vault
-    await expect(contract.tx.createVault(JSON.stringify(testVault), { signer: sender1 }))
+    await expect(contract.tx.createVault(testVault, { signer: sender1 }))
       .to.emit(contract, 'VaultCreation')
       .withArgs(0, sender1.address)
 
-    expect((await contract.query.getMetadata(0)).output).to.equal(JSON.stringify(testVault))
+    expect((await contract.query.getMetadata(0)).output).to.equal(testVault)
     
     // sender1 can update the metadata
-    await expect(contract.tx.updateMetadata(0, "123", { signer: sender1 }))
+    await expect(contract.tx.updateMetadata(0, newMetadata[0], { signer: sender1 }))
       .to.emit(contract, 'VaultUpdate')
       .withArgs(0, sender1.address)    
-    expect((await contract.query.getMetadata(0)).output).to.equal("123")
+    expect((await contract.query.getMetadata(0)).output).to.equal(newMetadata[0])
 
     // sender1 nominated sender2 to be a member
     expect((await contract.query.authorizeMember(0, sender2.address)).output).to.equal(false)
@@ -277,55 +297,61 @@ describe('SkyePassVault Smart Contract', () => {
     expect((await contract.query.authorizeMember(0, sender2.address)).output).to.equal(true)
 
     // sender2 & sender 1 can update the metadata, while sender3 cannot
-    expect((await contract.query.getMetadata(0)).output).to.equal("123")
     
-    await expect(contract.tx.updateMetadata(0, "456", { signer: sender1 }))
+    await expect(contract.tx.updateMetadata(0, newMetadata[1], { signer: sender1 }))
       .to.emit(contract, 'VaultUpdate')
       .withArgs(0, sender1.address)  
 
 
-    expect((await contract.query.getMetadata(0)).output).to.equal("456")
-    await expect(contract.tx.updateMetadata(0, "789", { signer: sender2 }))
+    expect((await contract.query.getMetadata(0)).output).to.equal(newMetadata[1])
+    await expect(contract.tx.updateMetadata(0, newMetadata[2], { signer: sender2 }))
       .to.emit(contract, 'VaultUpdate')
       .withArgs(0, sender2.address)
     
-    expect((await contract.query.getMetadata(0)).output).to.equal("789")
+    expect((await contract.query.getMetadata(0)).output).to.equal(newMetadata[2])
 
 
-
-    await expect(contract.tx.updateMetadata(0, "abc", { signer: sender3 }))
+    await expect(contract.tx.updateMetadata(0, newMetadata[3], { signer: sender3 }))
       .to.not.emit(contract, 'VaultUpdate')
     
-    expect((await contract.query.getMetadata(0)).output).to.equal("789")
+    badAuthResult = await contract.query.updateMetadata(0, newMetadata[3], { signer: sender3 })
+    expect(badAuthResult.output?.toHuman().Err).to.equal('AccessDenied')
+
+    expect((await contract.query.getMetadata(0)).output).to.equal(newMetadata[2])
   })
 
   it('only allows owner to nominate or remove members', async () => {
     const { contract, sender1, sender2, sender3, sender4 } = await setup();
 
     // sender1 creates a vault
-    await expect(contract.tx.createVault(JSON.stringify(testVault), { signer: sender1 }))
+    await expect(contract.tx.createVault(testVault, { signer: sender1 }))
       .to.emit(contract, 'VaultCreation')
       .withArgs(0, sender1.address)
 
-    expect((await contract.query.getMetadata(0)).output).to.equal(JSON.stringify(testVault))
+    expect((await contract.query.getMetadata(0)).output).to.equal(testVault)
 
     // sender1 nominated sender2 to be a member
     expect((await contract.query.authorizeMember(0, sender2.address)).output).to.equal(false)
     await expect(contract.tx.nominateMember(0, sender2.address, { signer: sender1 }))
       .to.emit(contract, "MemembershipGranted")
       .withArgs(0, sender1.address, sender2.address)
+    expect((await contract.query.authorizeMember(0, sender2.address)).output).to.equal(true)
 
 
     // sender 2 cannot nominate another member
-    expect((await contract.query.authorizeMember(0, sender2.address)).output).to.equal(true)
     expect((await contract.query.authorizeMember(0, sender3.address)).output).to.equal(false)
+
+    badAuthResult = await contract.query.nominateMember(0, sender3.address, { signer: sender2 })
+    expect(badAuthResult.output?.toHuman().Err).to.equal('AccessDenied')
+
     await expect(contract.tx.nominateMember(0, sender3.address, { signer: sender2 }))
       .to.not.emit(contract, "MemembershipGranted")
     expect((await contract.query.authorizeMember(0, sender3.address)).output).to.equal(false)
 
-    // others cannot nominate other members
-    expect((await contract.query.authorizeMember(0, sender2.address)).output).to.equal(true)
-    expect((await contract.query.authorizeMember(0, sender3.address)).output).to.equal(false)
+    // others cannot nominate other members    
+    badAuthResult = await contract.query.nominateMember(0, sender4.address, { signer: sender3 })
+    expect(badAuthResult.output?.toHuman().Err).to.equal('AccessDenied')
+
     await expect(contract.tx.nominateMember(0, sender4.address, { signer: sender3}))
       .to.not.emit(contract, "MemembershipGranted")
     expect((await contract.query.authorizeMember(0, sender3.address)).output).to.equal(false)
@@ -336,11 +362,11 @@ describe('SkyePassVault Smart Contract', () => {
     const { contract, sender1, sender2, sender3, sender4 } = await setup();
 
     // sender1 creates a vault
-    await expect(contract.tx.createVault(JSON.stringify(testVault), { signer: sender1 }))
+    await expect(contract.tx.createVault(testVault, { signer: sender1 }))
       .to.emit(contract, 'VaultCreation')
       .withArgs(0, sender1.address)
 
-    expect((await contract.query.getMetadata(0)).output).to.equal(JSON.stringify(testVault))
+    expect((await contract.query.getMetadata(0)).output).to.equal(testVault)
 
     // sender1 nominated sender2 to be a member
     expect((await contract.query.authorizeMember(0, sender2.address)).output).to.equal(false)
@@ -360,8 +386,12 @@ describe('SkyePassVault Smart Contract', () => {
     expect((await contract.query.authorizeOwner(0, sender2.address)).output).to.equal(false)
     expect((await contract.query.authorizeMember(0, sender2.address)).output).to.equal(true)
     expect((await contract.query.authorizeMember(0, sender3.address)).output).to.equal(true)
+    
+    badAuthResult = await contract.query.removeMember(0, sender3.address, { signer: sender2 })
+    expect(badAuthResult.output?.toHuman().Err).to.equal('AccessDenied')
     await expect(contract.tx.removeMember(0, sender3.address, { signer: sender2 }))
       .to.not.emit(contract, "MembershipRevoked")
+    
     expect((await contract.query.authorizeMember(0, sender3.address)).output).to.equal(true)
 
     // others cannot remove members
@@ -369,6 +399,9 @@ describe('SkyePassVault Smart Contract', () => {
     expect((await contract.query.authorizeMember(0, sender2.address)).output).to.equal(true)
     expect((await contract.query.authorizeMember(0, sender3.address)).output).to.equal(true)
     expect((await contract.query.authorizeMember(0, sender4.address)).output).to.equal(false)
+    
+    badAuthResult = await contract.query.removeMember(0, sender3.address, { signer: sender4 })
+    expect(badAuthResult.output?.toHuman().Err).to.equal('AccessDenied')
     await expect(contract.tx.removeMember(0, sender3.address, { signer: sender4 }))
       .to.not.emit(contract, "MembershipRevoked")
     expect((await contract.query.authorizeMember(0, sender3.address)).output).to.equal(true)
@@ -393,11 +426,11 @@ describe('SkyePassVault Smart Contract', () => {
     const { contract, sender1, sender2, sender3, sender4 } = await setup();
 
     // sender1 creates a vault & sender2 creates another vault
-    await expect(contract.tx.createVault(JSON.stringify(testVault), { signer: sender1 }))
+    await expect(contract.tx.createVault(testVault, { signer: sender1 }))
       .to.emit(contract, 'VaultCreation')
       .withArgs(0, sender1.address)
 
-    await expect(contract.tx.createVault(JSON.stringify(testVault), { signer: sender2 }))
+    await expect(contract.tx.createVault(testVault, { signer: sender2 }))
       .to.emit(contract, 'VaultCreation')
       .withArgs(1, sender2.address)
 
@@ -417,7 +450,7 @@ describe('SkyePassVault Smart Contract', () => {
     const { contract, sender1, sender2, sender3 } = await setup();
 
     // sender1 creates a vault
-    await expect(contract.tx.createVault(JSON.stringify(testVault), { signer: sender1 }))
+    await expect(contract.tx.createVault(testVault, { signer: sender1 }))
       .to.emit(contract, 'VaultCreation')
       .withArgs(0, sender1.address)
 
@@ -435,8 +468,13 @@ describe('SkyePassVault Smart Contract', () => {
     expect((await contract.query.authorizeMember(0, sender2.address)).output).to.equal(true)
     expect((await contract.query.authorizeMember(0, sender3.address)).output).to.equal(false)
 
+    badAuthResult = await contract.query.burnVault(0, { signer: sender2 })
+    expect(badAuthResult.output?.toHuman().Err).to.equal('AccessDenied')
     await expect(contract.tx.burnVault(0, { signer: sender2}))
       .to.not.emit(contract, "VaultBurnt")
+
+    badAuthResult = await contract.query.burnVault(0, { signer: sender3 })
+    expect(badAuthResult.output?.toHuman().Err).to.equal('AccessDenied')
     await expect(contract.tx.burnVault(0, { signer: sender3 }))
       .to.not.emit(contract, "VaultBurnt")
     await expect(contract.tx.burnVault(0, { signer: sender1 }))
@@ -445,7 +483,7 @@ describe('SkyePassVault Smart Contract', () => {
   })
 })
 
-// DB Functions
+DB Functions
 describe('DB Adapter', () => {
 	const filePath = path.resolve(__dirname + '/../client/passwords.json')
 
@@ -567,7 +605,7 @@ describe('DB Adapter', () => {
 	})
 })
 
-// // IPFS 
+// IPFS 
 describe('IPFS Adapter', () => {
 	const ipfs = new IPFS({
 		host: 'ipfs.infura.io',
@@ -578,23 +616,22 @@ describe('IPFS Adapter', () => {
 	const testString = "abcdejkjlkasdjfklajskldfjlkasjdklfjklsdjfklasjdlkfj"
 
 	it('uploads some content to IPFS', async() => {
-		const result = await ipfs.add(testString)
+		await ipfs.add(testString)
 	})
 
 	it('fetch content by CID on IPFS', async() => {
-		const result = await ipfs.add(testString)
+    const result = await ipfs.add(testString)
 		const content = await ipfs.cat(result.cid)
 		expect(content).to.equal(testString)
 	})
 
 	it('pins a CID on Infura IPFS', async () => {
 		const result = await ipfs.add(testString)
-		await ipfs.cat(result.cid)
 		await ipfs.pin(result.cid)
 	})
 })
 
-// // Encryption & Metadata
+// Encryption & Metadata
 describe('Encrytion & Metadata', () => {
 	const dbPath = path.resolve(__dirname + '/../client/passwords.json')
 	const emptyJSONFile = () => {fs.writeFileSync(dbPath, '{}')}
@@ -602,7 +639,7 @@ describe('Encrytion & Metadata', () => {
 
 
   // we are using eth-crypto here for the simplest keypair generation
-  // because it does not really matter. We just need some typical keypairs
+  // We just need some typical keypairs
 	const acct1 = crypto.createIdentity()
 	const acct2 = crypto.createIdentity()
 	const acct3 = crypto.createIdentity()

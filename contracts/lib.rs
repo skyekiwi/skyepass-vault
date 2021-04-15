@@ -6,7 +6,6 @@ use ink_lang as ink;
 mod skye_pass_vault {
     #[cfg(not(feature = "ink-as-dependency"))]
     use ink_storage::collections::{
-        // hashmap::Entry,
         HashMap as StorageHashMap,
     };
     use ink_prelude::string::String;
@@ -29,7 +28,8 @@ mod skye_pass_vault {
     pub enum Error {
         VaultIdError,
         AccessDenied,
-        VaultExists,
+        MetadataNotValid,
+        MathError
     }
 
     /// Event emitted when a vault is created
@@ -99,9 +99,18 @@ mod skye_pass_vault {
         pub fn create_vault(&mut self, metadata: String) -> Result<u128, Error> {
             let caller = self.env().caller();
 
+            if metadata.len() != 46 {
+                return Err(Error::MetadataNotValid);
+            }
+
             // get the next vault id
             let new_vault_id = self.next_vaultid;
             self.next_vaultid = self.next_vaultid + 1;
+            
+            if self.next_vaultid <= new_vault_id {
+                // this should not happen, unless there is a DoS
+                return Err(Error::MathError);
+            }
 
             self.vault_owner.entry(new_vault_id).or_insert(caller);
             self.vault_metadata.entry(new_vault_id).or_insert(metadata);
@@ -152,6 +161,10 @@ mod skye_pass_vault {
         pub fn update_metadata(&mut self, vault_id: VaultId, metadata: String) -> Result<(), Error> {
             let caller = self.env().caller();
 
+            if metadata.len() != 46 {
+                return Err(Error::MetadataNotValid);
+            }
+
             if !self.authorize_owner(vault_id, caller) && 
              !self.authorize_member(vault_id, caller) {
                 return Err(Error::AccessDenied);
@@ -167,7 +180,6 @@ mod skye_pass_vault {
                 operator: caller
             });
             Ok(())
-
         }
 
         #[ink(message)]

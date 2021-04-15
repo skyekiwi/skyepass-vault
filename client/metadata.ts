@@ -14,10 +14,6 @@ class Metadata {
 	}
 	ipfs: IPFS
 	metadataCid: any
-	metadata: {
-		pieces: number, quorum: number, nonce: number, owner: string, name: string,
-		unencrypted_cid: Array<string>, encrypted_cid: {[member: string]: string}
-	}
 
 	constructor(encryptionSchema, name: string, ipfs: IPFS, db:DB) {
 		this.encryptionSchema = { ...encryptionSchema }
@@ -26,9 +22,16 @@ class Metadata {
 
 		this.name = name
 		this.metadataCid = this.db.getCID()
+
+		// pieces = public piece(s) + owner's piece + members' piece(s)
 		if (this.encryptionSchema.pieces !== this.encryptionSchema.publicPieceCount
 			+ this.encryptionSchema.members.length + 1) {
 				throw new Error("wrong pieces count supplied")
+		}
+
+		// quorum > pieces : a vault that can never be decrypt
+		if (this.encryptionSchema.quorum > this.encryptionSchema.pieces) {
+			throw new Error("wrong pieces count supplied")
 		}
 	}
 
@@ -41,24 +44,27 @@ class Metadata {
 		return nonce
 	}
 
+	updateEncryptionSchema(newEncryptionSchema) {
+		this.encryptionSchema = newEncryptionSchema
+	}
+
 	async buildMetadata() {
 		// fetch most updated nonce version
 		const nonce = await this.getIPFSMetadataNonce()
 		const current_nonce = this.db.getNonce()
 
 		if (current_nonce < nonce) {
-			return {cid: "-1", result: "-1"}
 			throw new Error("Nonce error")
 		}
 
-		this.metadata = {}
-		this.metadata.pieces = this.encryptionSchema.pieces
-		this.metadata.quorum = this.encryptionSchema.quorum
-		this.metadata.nonce = current_nonce
+		let metadata = {}
+		metadata.pieces = this.encryptionSchema.pieces
+		metadata.quorum = this.encryptionSchema.quorum
+		metadata.nonce = current_nonce
 
-		this.metadata.owner = this.encryptionSchema.owner
-		this.metadata.unencrypted_cid = []
-		this.metadata.encrypted_cid = {}
+		metadata.owner = this.encryptionSchema.owner
+		metadata.unencrypted_cid = []
+		metadata.encrypted_cid = {}
 
 		const msg = this.db.saveUpdates()
 		const hexMsg = secrets.str2hex(JSON.stringify(msg))
@@ -67,29 +73,33 @@ class Metadata {
 			this.encryptionSchema.quorum)
 
 		let pt = 0;
+
+		// first build public pieces
 		for (; pt < this.encryptionSchema.publicPieceCount; pt++) {
-			this.metadata.unencrypted_cid.push(await this.upload(shares[pt]))
+			metadata.unencrypted_cid.push(await this.upload(shares[pt]))
 		}
 
-		this.metadata.encrypted_cid[this.encryptionSchema.owner + ""] = await this.upload(
+		// build owner piece
+		metadata.encrypted_cid[this.encryptionSchema.owner + ""] = await this.upload(
 			await Metadata.encrypt(this.encryptionSchema.owner, shares[pt])
 		)
 		pt += 1
-
+		
+		// if there are members, build member pieces
 		if (this.encryptionSchema.members != null) {
 			for (let member of this.encryptionSchema.members) {
-				this.metadata.encrypted_cid[member + ""] = 
+				metadata.encrypted_cid[member + ""] = 
 					await this.upload(await Metadata.encrypt(member, shares[pt]))
 				pt += 1
 			}
 		}
 
-		this.metadata.name = this.name
-		const newCid = await this.upload(JSON.stringify(this.metadata))
+		metadata.name = this.name
+		const newCid = await this.upload(JSON.stringify(metadata))
 
 		this.metadataCid = newCid
 		this.db.writeCID(newCid)
-		return {cid: newCid, result: this.metadata}
+		return {cid: newCid, result: metadata}
 	}
 
 	async upload(content) {
@@ -99,16 +109,19 @@ class Metadata {
 	}
 
 	async recover(metadata, publicKey, privateKey) {
+		// quorum met by 1 keypair supplied + publicPiecesCount
 		if (this.encryptionSchema.quorum <= 1 + this.encryptionSchema.publicPieceCount) {
 			let contents = new Array()
 
+			// collect all public pieces
 			for (let content of metadata.unencrypted_cid)
 				contents.push(await this.ipfs.cat(content))
 
-			for (let member in this.metadata.encrypted_cid) {
+			// find & decrypt the piece related to the keypair supplies
+			for (let member in metadata.encrypted_cid) {
 				if (member == publicKey)
 					contents.push(await Metadata.decrypt(privateKey,
-						await this.ipfs.cat(this.metadata.encrypted_cid[member])))
+						await this.ipfs.cat(metadata.encrypted_cid[member])))
 			}
 
 			const result = await Metadata.recover(contents)

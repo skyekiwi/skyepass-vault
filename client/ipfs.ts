@@ -1,5 +1,4 @@
 import createClient from 'ipfs-http-client'
-import cid from 'cids'
 
 class IPFSConfig {
 	host: string
@@ -21,20 +20,34 @@ class IPFS {
 	}
 	
 	public async add(str:string) {
-		return await this.client.add(str)
+		try {
+			return await this.client.add(str)
+		} catch (err) {
+			console.error(err)
+			throw (new Error('IPFS Failure'))
+		}
 	}
 	public async cat(cid:string) {
 		// TODO: check CID validity
 		let result = ''
-		const stream = this.client.cat(cid)
-		for await (const chunk of stream) {
+		try {
+			const stream = this.client.cat(cid)
+			for await (const chunk of stream) {
 				result += chunk.toString()
+			}
+			return result
+		} catch(err) {
+			console.error(err)
+			throw (new Error('IPFS Failure'))
 		}
-		return result
 	}
 	public async pin(cid:string) {
-		// TODO: check CID validity
-		return await this.client.pin.add(cid)
+		try {
+			return await this.client.pin.add(cid)
+		} catch (err) {
+			console.error(err)
+			throw (new Error('IPFS Failure'))
+		}
 	}
 }
 export {IPFS}
