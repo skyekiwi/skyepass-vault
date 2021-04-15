@@ -483,7 +483,7 @@ describe('SkyePassVault Smart Contract', () => {
   })
 })
 
-DB Functions
+// DB Functions
 describe('DB Adapter', () => {
 	const filePath = path.resolve(__dirname + '/../client/passwords.json')
 
