@@ -120,6 +120,7 @@ describe('End to End run through', () => {
       .withArgs(0, sender1.address, sender3.address)
     
     const new_result = await metadata.buildMetadata()
+    expect(new_result).to.not.equal(cid)
     await expect(contract.tx.updateMetadata(0, new_result.cid, {signer: sender1}))
       .to.emit(contract, 'VaultUpdate')
       .withArgs(0, sender1.address)

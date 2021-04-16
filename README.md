@@ -56,15 +56,12 @@ A good general guide to setup the environment for Substrate environment can be f
     cargo install --force cargo-contract
     ```
 
+
 4. Grab a local Substrate blockchain node with `pallet-contract` included. There are many options: [jupiter](https://github.com/patractlabs/jupiter) is the one we choose. Alternatively, you can get [canvas](https://github.com/paritytech/canvas-node) by Parity. `Rust` is known for compiling slowly. It took me an hour to compile [jupiter](https://github.com/patractlabs/jupiter). 
 
     - To use [jupiter](https://github.com/patractlabs/jupiter), follow this [guide](https://github.com/patractlabs/jupiter#compile-and-run).  
 
-
-
     - To use [canvas](https://github.com/paritytech/canvas-node), follow this [guide](https://substrate.dev/substrate-contracts-workshop/#/0/setup?id=installing-the-canvas-node). 
-    
-    output of `canvas --version` is `canvas 0.1.0-385c4cc-x86_64-macos`
     
     - Lastly, fire up the local blockchain 
 
@@ -85,6 +82,22 @@ A good general guide to setup the environment for Substrate environment can be f
     ```
 
     
+#### Versions 
+
+Codes are tested with the following environment:
+
+`binaryen`: `version 101` <br/>
+`cargo`: `cargo 1.51.0 (43b129a20 2021-03-16)` <br/>
+`cargo-contract`:  `cargo-contract 0.10.0` <br/>
+`node`: `v14.16.0` <br/>
+`rust`: `rustc 1.51.0 (2fd73fabe 2021-03-23)` <br/><br/>
+
+**Node Packages**
+`redspot`: `0.11.4-0`<br/>
+`polkadot.js`: `6.1.1`<br/>
+
+`canvas`: `canvas 0.1.0-385c4cc-x86_64-macos` <br/>
+`OS Version`: `macOS Big Sur 11.0.1` <br/>
 
 #### Run Tests
 
