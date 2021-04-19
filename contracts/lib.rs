@@ -216,14 +216,5 @@ mod skye_pass_vault {
             let membership = self.vault_operators.get(&(vault_id, id));
             return membership != None;
         }
-
-        #[ink(message)]
-        pub fn temporary_test(&self, number: i32) -> Result<(i32), Error> {
-            if number % 2 == 0 {
-                return Ok(number)
-            } else {
-                return Err(Error::MetadataNotValid);
-            }
-        }
     }
 }
